@@ -1,4 +1,5 @@
-require("dotenv").config();
+require("dotenv-flow").config();
+
 const express = require("express");
 const cors = require("cors");
 const router = require("./router/index.js");
@@ -6,6 +7,7 @@ const connectDb = require("./db/index.js");
 const colors = require("colors");
 const bodyParser = require("body-parser");
 const fs = require("fs");
+const morgan = require("morgan");
 
 connectDb();
 const app = express();
@@ -14,6 +16,9 @@ app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 app.use(cors());
+if (process.env.NODE_ENV !== "production") {
+  app.use(morgan("dev"));
+}
 
 app.use("/api/v1", router);
 

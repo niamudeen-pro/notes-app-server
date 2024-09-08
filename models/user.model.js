@@ -1,23 +1,28 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema(
   {
     username: {
       type: String,
+      default: null,
     },
     email: {
       type: String,
-      unique: [true, "Email is already in use."],
+      required: true,
     },
     phone: {
       type: Number,
-      unique: [true, "Phone number is already in use."],
+      default: null,
     },
     password: {
       type: String,
+      default: null,
     },
     profileImg: {
+      type: String,
+      default: null,
+    },
+    resetPassowordToken: {
       type: String,
       default: null,
     },
@@ -25,23 +30,5 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// secruring the password with bcrypt
-userSchema.pre("save", async function (next) {
-  const user = this;
-
-  if (!user.isModified("password")) {
-    next();
-  }
-
-  try {
-    const saltRound = 10;
-    const hash_password = await bcrypt.hash(user.password, saltRound);
-    user.password = hash_password;
-  } catch (error) {
-    next(error);
-  }
-});
-
-// define the model and collection name
 const User = new mongoose.model("User", userSchema);
 module.exports = User;

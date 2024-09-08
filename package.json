@@ -4,24 +4,31 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "cross-env NODE_ENV=development nodemon index.js",
+    "prod": "cross-env NODE_ENV=production  nodemon index.js"
   },
   "author": "Niamudeen",
   "license": "ISC",
   "dependencies": {
+    "@sendgrid/mail": "^8.1.3",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",
     "colors": "^1.4.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
+    "cross-env": "^7.0.3",
+    "dotenv-flow": "^4.1.0",
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.2",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.15",
     "nodemon": "^3.1.4"
   },
   "engines": {
     "node": ">=18.18.0 <=19.0.0"
+  },
+  "devDependencies": {
+    "morgan": "^1.10.0"
   }
 }
