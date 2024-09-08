@@ -10,14 +10,26 @@ const sgMail = require("@sendgrid/mail");
 
 // ================ REGISTER ======================
 
-const encryptPassword = async (password) => {
-  if (!password) {
+const encryptPassword = async (value) => {
+  if (!value) {
     return null;
   }
   try {
-    return await bcrypt.hash(password, 10);
+    return await bcrypt.hash(value, 10);
   } catch (error) {
     console.log("encryptPassword error  ", error);
+    return null;
+  }
+};
+
+const generateToken = (payload, secretKey, expiresIn) => {
+  try {
+    const token = jwt.sign(payload, secretKey, {
+      expiresIn: expiresIn,
+    });
+    return token;
+  } catch (error) {
+    console.log(error, "error generateToken");
     return null;
   }
 };
@@ -66,25 +78,13 @@ const frogotPassword = async (req, res) => {
       });
     }
 
-    const generateToken = (payload, secretKey, expiresIn) => {
-      try {
-        const token = jwt.sign(payload, secretKey, {
-          expiresIn: expiresIn,
-        });
-        return token;
-      } catch (error) {
-        console.log(error, "error generateToken");
-        return null;
-      }
-    };
-
     const payload = {
-      userId: user?._id.toString(),
+      userId: Math.random().toString(36).substring(2, 15),
     };
     const expiresIn = "5m";
 
     /**
-     ** This function is used to generate token
+     ** generate token for reset password
      * */
 
     const token = generateToken(
@@ -97,15 +97,16 @@ const frogotPassword = async (req, res) => {
       return res.status(400).send({ code: "INVALID_REQUEST" });
     }
 
+    // save token in database
+
     const RESET_URL = `${process.env.CLIENT_BASE_URL}/reset-password/${token}`;
 
     await User.findOneAndUpdate(
       { _id: user?._id },
       {
-        resetPassowordToken: token,
+        resetPasswordToken: token,
       }
     );
-    console.log(process.env.NODE_ENV, "process.env.NODE_ENV");
 
     try {
       if (process.env.NODE_ENV === "production") {
@@ -168,10 +169,10 @@ const frogotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
-    const { token: resetPassowordToken } = req.params;
+    const { token: resetPasswordToken } = req.params;
     const { password: newPassword, confirmPassword } = req.body;
 
-    if (!resetPassowordToken || !newPassword || !confirmPassword) {
+    if (!newPassword || !confirmPassword) {
       return res.status(400).send({
         code: "INVALID_REQUEST",
         message: "Token and new password are required.",
@@ -187,31 +188,29 @@ const resetPassword = async (req, res) => {
 
     // Verify the token
     const decoded = jwt.verify(
-      resetPassowordToken,
+      resetPasswordToken,
       process.env.REST_PASSWORD_SECRET_KEY
     );
 
-    // Find the user by the ID in the token
-    const user = await User.findOne({
-      _id: decoded.userId,
-    });
-
-    if (!user) {
+    if (!decoded) {
       return res.status(400).send({
         code: "INVALID_TOKEN",
         message:
           "Invalid or expired token. Please request a new password reset.",
       });
     }
+    const user = await User.findOne({
+      resetPasswordToken: resetPasswordToken,
+    });
+
+    console.log(user, "user");
 
     // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const ecryptedPassword = await encryptPassword(newPassword);
 
-    // Update the user's password and clear the reset token
-    await User.findByIdAndUpdate(user._id, {
-      password: hashedPassword,
-      resetPasswordToken: null, // Clear the reset token
-    });
+    user.password = ecryptedPassword;
+    user.resetPasswordToken = null;
+    user.save();
 
     return res.status(200).send({
       code: "SUCCESS",
